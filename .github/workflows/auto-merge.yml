@@ -3,9 +3,14 @@
 # changeflow's merge_strategies.WorkflowGatedMerge does nothing but wait -- this workflow
 # is the thing doing the merge.
 #
-# TODO: confirm this matches the real bot login. For a GitHub App named "my-changeflow-app"
-# the PR author login is typically "my-changeflow-app[bot]" -- verify via the PR's
-# `user.login` once changeflow has opened one real PR against this repo.
+# Confirmed by a real PR: the bot login below (my-changeflow-app[bot]) matches.
+#
+# IMPORTANT: the merge step uses secrets.MERGE_TOKEN (a PAT), not the default
+# secrets.GITHUB_TOKEN. Merges/pushes made with the default GITHUB_TOKEN do NOT trigger
+# other workflows (GitHub's loop-prevention) -- so deploy.yml would never fire on the
+# merge commit, and changeflow's find_run() would time out waiting for a push-triggered
+# run that never happens. Set MERGE_TOKEN as a repo secret to a PAT with repo+workflow
+# scope: `gh secret set MERGE_TOKEN -R <owner>/<repo>`.
 name: auto-merge-changeflow-prs
 on:
   pull_request_target:
@@ -22,6 +27,6 @@ jobs:
     steps:
       - name: Merge PR opened by changeflow
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.MERGE_TOKEN }}
           PR_URL: ${{ github.event.pull_request.html_url }}
         run: gh pr merge --squash "$PR_URL"
