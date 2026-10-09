@@ -1,0 +1,27 @@
+# Option C's entire trust mechanism: allow-list changeflow's App bot identity by *author*,
+# not by label or title (see api-repo/README.md "Watch out for"), and merge it ourselves.
+# changeflow's merge_strategies.WorkflowGatedMerge does nothing but wait -- this workflow
+# is the thing doing the merge.
+#
+# TODO: confirm this matches the real bot login. For a GitHub App named "my-changeflow-app"
+# the PR author login is typically "my-changeflow-app[bot]" -- verify via the PR's
+# `user.login` once changeflow has opened one real PR against this repo.
+name: auto-merge-changeflow-prs
+on:
+  pull_request_target:
+    types: [opened, reopened, synchronize]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  merge:
+    if: github.event.pull_request.user.login == 'my-changeflow-app[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Merge PR opened by changeflow
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_URL: ${{ github.event.pull_request.html_url }}
+        run: gh pr merge --squash "$PR_URL"
