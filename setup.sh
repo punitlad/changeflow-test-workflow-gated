@@ -34,9 +34,9 @@ Done. No branch ruleset needed for this mode -- see README.md for why.
 Remaining manual steps:
   1. Install the GitHub App on this repo:
      https://github.com/settings/apps/my-changeflow-app -> Install App -> $GH_OWNER/$REPO_NAME
-  2. Open one real PR via changeflow against this repo and confirm the author login in
-     auto-merge.yml's \`if:\` actually matches what shows up (currently assumes
-     'my-changeflow-app[bot]') -- fix .github/workflows/auto-merge.yml if it doesn't.
+  2. auto-merge.yml's \`if:\` already assumes the bot login 'my-changeflow-app[bot]',
+     confirmed against a real PR for that App -- if you're pointing this at a differently
+     named App, update the login in .github/workflows/auto-merge.yml first.
 
 Then point changeflow at it (see README.md "Run changeflow against it").
 MSG

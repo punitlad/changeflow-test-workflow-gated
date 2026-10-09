@@ -43,12 +43,14 @@ references `secrets.MERGE_TOKEN`; this secret is the one thing `setup.sh` can't 
 ```bash
 export GH_OWNER=<your-github-user-or-org>
 export REPO_NAME=changeflow-test-workflow-gated
+export REVIEWER_LOGIN=<github-login-for-the-required-reviewer>   # defaults to punitlad
 ./setup.sh
 ```
 
 `setup.sh` will:
 1. `gh repo create` (if `REPO_NAME` doesn't exist yet) and push this directory to it
-2. Create the `production` environment with `punitlad` as a required reviewer
+2. Create the `production` environment with `$REVIEWER_LOGIN` (`punitlad` by default) as a
+   required reviewer
 
 Then, in order:
 1. **Install your GitHub App on this repo.**
@@ -65,7 +67,7 @@ export CHANGEFLOW_TARGET_REPO=$REPO_NAME
 export CHANGEFLOW_MERGE_MODE=workflow_gated
 export CHANGEFLOW_APPROVAL_MODE=pending_deployments
 export CHANGEFLOW_PIPELINE_ENVIRONMENT=production
-export CHANGEFLOW_APPROVER_TOKEN=<a PAT for punitlad with repo + workflow scope>
+export CHANGEFLOW_APPROVER_TOKEN=<a PAT for whoever REVIEWER_LOGIN was set to (punitlad by default), with repo + workflow scope>
 # ...plus CHANGEFLOW_APP_ID / CHANGEFLOW_APP_PRIVATE_KEY / CHANGEFLOW_INSTALLATION_ID
 uvicorn changeflow.api:app
 curl -XPOST localhost:8000/team-onboardings -d '{"team":"payments","requested_by":"you"}'
