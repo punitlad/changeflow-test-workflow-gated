@@ -15,7 +15,7 @@ if gh repo view "$GH_OWNER/$REPO_NAME" >/dev/null 2>&1; then
   git push -u origin main
 else
   echo "    creating + pushing"
-  gh repo create "$GH_OWNER/$REPO_NAME" --private --source=. --remote=origin --push
+  gh repo create "$GH_OWNER/$REPO_NAME" --public --source=. --remote=origin --push
 fi
 
 echo "==> Creating 'production' environment with $REVIEWER_LOGIN as required reviewer"
