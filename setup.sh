@@ -18,6 +18,26 @@ else
   gh repo create "$GH_OWNER/$REPO_NAME" --public --source=. --remote=origin --push
 fi
 
+echo "==> Creating branch ruleset on main (PR + required 'validate' check, NO required review, no bypass)"
+gh api -X POST "repos/$GH_OWNER/$REPO_NAME/rulesets" --input - >/dev/null <<EOF
+{
+  "name": "main-protection",
+  "target": "branch",
+  "enforcement": "active",
+  "conditions": {"ref_name": {"include": ["refs/heads/main"], "exclude": []}},
+  "rules": [
+    {"type": "pull_request"},
+    {
+      "type": "required_status_checks",
+      "parameters": {
+        "required_status_checks": [{"context": "validate"}],
+        "strict_required_status_checks_policy": true
+      }
+    }
+  ]
+}
+EOF
+
 echo "==> Creating 'production' environment with $REVIEWER_LOGIN as required reviewer"
 REVIEWER_ID=$(gh api "users/$REVIEWER_LOGIN" --jq .id)
 gh api -X PUT "repos/$GH_OWNER/$REPO_NAME/environments/production" --input - >/dev/null <<EOF
@@ -29,7 +49,9 @@ EOF
 
 cat <<MSG
 
-Done. No branch ruleset needed for this mode -- see README.md for why.
+Done. The App is NOT on this ruleset's bypass list -- it merges by passing the same required
+check a human would, just via auto-merge.yml instead of a manual click. See README.md for why
+this ruleset was added back.
 
 Remaining manual steps:
   1. Install the GitHub App on this repo:

@@ -1,0 +1,22 @@
+# PR-time required check -- the ruleset's required_status_checks entry (see setup.sh).
+# This file didn't exist before: workflow_gated originally shipped with no branch ruleset
+# and no PR-time check at all, which meant humans merging here had LESS protection than
+# base-repo's own pattern gives them, not just "the API skips a gate humans still use" --
+# a real regression to the human path, not an add-on for the API. Restoring this file +
+# the ruleset in setup.sh brings this repo back to parity with base-repo/native-auto-merge.
+#
+# Runs for *both* paths, unscoped by actor -- same reasoning as ruleset-bypass's ci.yml: a
+# required check that's skipped via job-level `if:` never posts a status at all, which would
+# permanently block whichever path got excluded.
+name: ci
+on:
+  pull_request:
+    branches: [main]
+jobs:
+  validate:
+    name: validate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate teams.json is valid JSON
+        run: python3 -m json.tool teams.json > /dev/null

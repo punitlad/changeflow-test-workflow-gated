@@ -5,6 +5,17 @@
 #
 # Confirmed by a real PR: the bot login below (my-changeflow-app[bot]) matches.
 #
+# Triggered on ci.yml's completion, not on pull_request_target at PR-open time. setup.sh now
+# creates the same branch ruleset base-repo and native-auto-merge give humans (PR + required
+# "validate" check, no bypass actor) -- restoring the protection this mode used to skip
+# entirely. Merging on pull_request_target: [opened, ...] would race that check: the PR is
+# often not green yet, and the merge attempt would 422 against the ruleset. Waiting for
+# workflow_run: [completed] guarantees "validate" already passed before we try.
+#
+# NOTE: a workflow_run listener always runs the version of ITSELF committed on the default
+# branch (main), not the one in the PR -- a GitHub quirk, not a bug here, but worth knowing
+# if you edit this file and wonder why a PR's run didn't pick up your change.
+#
 # IMPORTANT: the merge step uses secrets.MERGE_TOKEN (a PAT), not the default
 # secrets.GITHUB_TOKEN. Merges/pushes made with the default GITHUB_TOKEN do NOT trigger
 # other workflows (GitHub's loop-prevention) -- so deploy.yml would never fire on the
@@ -13,20 +24,29 @@
 # scope: `gh secret set MERGE_TOKEN -R <owner>/<repo>`.
 name: auto-merge-changeflow-prs
 on:
-  pull_request_target:
-    types: [opened, reopened, synchronize]
-
-permissions:
-  contents: write
-  pull-requests: write
+  workflow_run:
+    workflows: ["ci"]
+    types: [completed]
 
 jobs:
   merge:
-    if: github.event.pull_request.user.login == 'my-changeflow-app[bot]'
+    if: github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'pull_request'
     runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ secrets.MERGE_TOKEN }}
     steps:
-      - name: Merge PR opened by changeflow
-        env:
-          GH_TOKEN: ${{ secrets.MERGE_TOKEN }}
-          PR_URL: ${{ github.event.pull_request.html_url }}
-        run: gh pr merge --squash "$PR_URL"
+      - name: Find the PR this run validated
+        id: pr
+        run: |
+          number=$(gh api "repos/${{ github.repository }}/commits/${{ github.event.workflow_run.head_sha }}/pulls" --jq '.[0].number // empty')
+          echo "number=$number" >> "$GITHUB_OUTPUT"
+
+      - name: Merge if opened by changeflow
+        if: steps.pr.outputs.number != ''
+        run: |
+          author=$(gh pr view "${{ steps.pr.outputs.number }}" --json author --jq .author.login)
+          if [ "$author" = "my-changeflow-app[bot]" ]; then
+            gh pr merge --squash "${{ steps.pr.outputs.number }}"
+          else
+            echo "PR #${{ steps.pr.outputs.number }} author is $author, not the app; leaving it for a human to merge"
+          fi
