@@ -16,6 +16,13 @@
 # branch (main), not the one in the PR -- a GitHub quirk, not a bug here, but worth knowing
 # if you edit this file and wonder why a PR's run didn't pick up your change.
 #
+# NOTE: `gh pr view --json author` (GraphQL-backed) renders a bot's login as "app/<slug>",
+# NOT "<slug>[bot]" -- that suffix convention is from the REST API / webhook actor fields
+# (github.actor, github.event.pull_request.user.login), which is what ci.yml and this
+# workflow's own `if:` elsewhere in this repo set compare against. Found by running this for
+# real: the first version of this step compared against "my-changeflow-app[bot]" and silently
+# treated the App's own PR as a human's, every time.
+#
 # IMPORTANT: the merge step uses secrets.MERGE_TOKEN (a PAT), not the default
 # secrets.GITHUB_TOKEN. Merges/pushes made with the default GITHUB_TOKEN do NOT trigger
 # other workflows (GitHub's loop-prevention) -- so deploy.yml would never fire on the
@@ -45,7 +52,7 @@ jobs:
         if: steps.pr.outputs.number != ''
         run: |
           author=$(gh pr view "${{ steps.pr.outputs.number }}" -R "${{ github.repository }}" --json author --jq .author.login)
-          if [ "$author" = "my-changeflow-app[bot]" ]; then
+          if [ "$author" = "app/my-changeflow-app" ]; then
             gh pr merge --squash -R "${{ github.repository }}" "${{ steps.pr.outputs.number }}"
           else
             echo "PR #${{ steps.pr.outputs.number }} author is $author, not the app; leaving it for a human to merge"
