@@ -14,7 +14,19 @@ than `base-repo`'s own pattern gives them** — anyone could merge straight to `
 checked. That's a regression to the human path, not an add-on for the API, which is exactly the
 thing this whole test-repos exercise is supposed to avoid. Both are restored now: `ci.yml`
 (copied from `base-repo`) and the same ruleset `native-auto-merge` uses (PR + required `validate`
-check, no bypass actor, no required review).
+check, no bypass actor, no required review). **Re-validated end-to-end after the fix** (PR #6) —
+`pr_open → merging → merged → pipeline_running → succeeded` in ~36s.
+
+Two bugs only surfaced once this was run for real against live GitHub, both now fixed (PRs #4, #5):
+- `gh pr view`/`gh pr merge` need `-R owner/repo` explicitly — `auto-merge.yml` has no
+  `actions/checkout` step, so there's no local git repo for the `gh` CLI to infer the target
+  repo from. Failed with `fatal: not a git repository`.
+- `gh pr view --json author` (GraphQL-backed) renders a bot's login as `app/<slug>`, **not**
+  `<slug>[bot]` — that suffix form is the REST/webhook convention (`github.actor`,
+  `github.event.pull_request.user.login`), which is what `ci.yml` and this file's own `if:`
+  elsewhere compare against. The first version of the author check used the wrong format and
+  silently treated the App's own PR as a human's, every time — it never errored, it just never
+  merged anything.
 
 ## What's here
 
