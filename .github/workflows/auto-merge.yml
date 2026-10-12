@@ -44,9 +44,9 @@ jobs:
       - name: Merge if opened by changeflow
         if: steps.pr.outputs.number != ''
         run: |
-          author=$(gh pr view "${{ steps.pr.outputs.number }}" --json author --jq .author.login)
+          author=$(gh pr view "${{ steps.pr.outputs.number }}" -R "${{ github.repository }}" --json author --jq .author.login)
           if [ "$author" = "my-changeflow-app[bot]" ]; then
-            gh pr merge --squash "${{ steps.pr.outputs.number }}"
+            gh pr merge --squash -R "${{ github.repository }}" "${{ steps.pr.outputs.number }}"
           else
             echo "PR #${{ steps.pr.outputs.number }} author is $author, not the app; leaving it for a human to merge"
           fi
